@@ -1,0 +1,511 @@
+{
+  "info": {
+    "_postman_id": "a918e7e1-8f24-4f4c-9f88-12d45c6e8901",
+    "name": "Task Manager REST API with AI Task Planning",
+    "description": "Comprehensive Postman test collection for the Task Manager REST API with MongoDB CRUD and Groq AI task planning. Includes automated test scripts for validation, status assertions, and dynamic variable handling.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "GET Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"API reports healthy status\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.status).to.eql(\"healthy\");",
+                  "    pm.expect(json.data).to.have.property(\"database\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Verifies that the Node.js API process is running and inspects database connectivity state."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tasks CRUD",
+      "item": [
+        {
+          "name": "Create Task (POST /api/tasks)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Task created and ID saved\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property(\"_id\");",
+                  "    pm.expect(json.data.status).to.eql(\"pending\");",
+                  "    pm.collectionVariables.set(\"taskId\", json.data._id);",
+                  "    console.log(\"Saved taskId:\", json.data._id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Implement Groq AI Task Planner\",\n  \"description\": \"Integrate the Groq SDK with JSON mode and Zod validation\",\n  \"status\": \"pending\",\n  \"dueDate\": \"2026-10-31T23:59:59.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"]
+            },
+            "description": "Creates a new task. The test script saves the generated _id into the {{taskId}} collection variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tasks (GET /api/tasks)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response returns tasks list\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(Array.isArray(json.data)).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"]
+            },
+            "description": "Retrieves all tasks sorted by creation date descending."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task By ID (GET /api/tasks/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns the requested task object\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data._id).to.eql(pm.collectionVariables.get(\"taskId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskId}}"]
+            },
+            "description": "Retrieves the single task specified by {{taskId}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Task (PUT /api/tasks/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Task status updated to in-progress\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.status).to.eql(\"in-progress\");",
+                  "    pm.expect(json.data.title).to.eql(\"Implement Groq AI Task Planner (Updated)\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Implement Groq AI Task Planner (Updated)\",\n  \"status\": \"in-progress\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskId}}"]
+            },
+            "description": "Updates allowed fields (title, description, status, dueDate) on the specified task."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task (DELETE /api/tasks/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Task successfully deleted\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property(\"id\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "{{taskId}}"]
+            },
+            "description": "Deletes the task specified by {{taskId}}."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Validation & Error Scenarios",
+      "item": [
+        {
+          "name": "Invalid Task ID (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Returns validation error details\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "    pm.expect(json.message).to.include(\"Validation failed\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/invalid-object-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "invalid-object-id"]
+            },
+            "description": "Tests rejection of malformed MongoDB ObjectId parameters."
+          },
+          "response": []
+        },
+        {
+          "name": "Non-Existent Task ID (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Returns not found error message\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "    pm.expect(json.message).to.include(\"not found\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/507f1f77bcf86cd799439011",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks", "507f1f77bcf86cd799439011"]
+            },
+            "description": "Tests 404 response when querying a valid format ID that does not exist in the database."
+          },
+          "response": []
+        },
+        {
+          "name": "Missing Task Title (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Identifies missing title field in errors\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "    pm.expect(json.errors).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Task body without title\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"]
+            },
+            "description": "Verifies that omitting the mandatory title field triggers validation error 400."
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Status Value (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Rejects unsupported status enum\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Valid Title\",\n  \"status\": \"archived_invalid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tasks"]
+            },
+            "description": "Verifies rejection of unsupported status enum values."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "AI Task Planning",
+      "item": [
+        {
+          "name": "Generate AI Task Plan (POST /api/ai/plan-task)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response conforms to Plan schema\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.plan).to.have.property(\"summary\");",
+                  "    pm.expect([\"low\", \"medium\", \"high\"]).to.include(json.plan.priority);",
+                  "    pm.expect(json.plan.estimatedHours).to.be.a(\"number\");",
+                  "    pm.expect(json.plan.estimatedHours).to.be.above(0);",
+                  "    pm.expect(Array.isArray(json.plan.steps)).to.be.true;",
+                  "    pm.expect(json.plan.steps.length).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"I need to build a portfolio website within three days.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/plan-task",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "plan-task"]
+            },
+            "description": "Generates a structured task breakdown with summary, priority, estimatedHours, and actionable steps using Groq."
+          },
+          "response": []
+        },
+        {
+          "name": "Missing AI Description (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Rejects empty or missing description\", function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"   \"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/plan-task",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "plan-task"]
+            },
+            "description": "Tests rejection when description is empty or whitespace."
+          },
+          "response": []
+        },
+        {
+          "name": "AI Provider Error Testing Notes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Simulate provider error scenarios (see description tab for test notes)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/plan-task",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "plan-task"]
+            },
+            "description": "### AI Provider Error Testing Scenarios:\n\n1. **Missing GROQ_API_KEY (HTTP 503)**:\n   - When `GROQ_API_KEY` is not set or empty in `.env`, the API safely returns HTTP 503 Service Unavailable without exposing credentials.\n\n2. **Invalid Model ID (HTTP 502)**:\n   - When `GROQ_MODEL` is unavailable or invalid, the API safely converts the provider error to HTTP 502 Bad Gateway.\n\n3. **Timeout (HTTP 504)**:\n   - If the request takes longer than `AI_REQUEST_TIMEOUT_MS` (e.g. 20000ms), the Groq SDK cancels the request and the API returns HTTP 504 Gateway Timeout.\n\n4. **Rate Limiting (HTTP 429)**:\n   - Exceeding `AI_RATE_LIMIT_MAX` (default 10 requests / 15 mins) triggers HTTP 429 Too Many Requests: `{\"success\":false,\"message\":\"Too many AI planning requests from this IP. Please try again later.\"}`.\n\n5. **Automated Mocks**:\n   - Provider scenarios (success, timeout, provider errors, malformed JSON, and rate limiting) are verified in `tests/ai.test.js` without exposing a real token."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

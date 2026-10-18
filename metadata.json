@@ -1,0 +1,6 @@
+{
+  "name": "Task Manager REST API with AI Task Planning",
+  "description": "Production-ready, secure, and testable Node.js Express REST API with MongoDB Mongoose CRUD and Groq AI task planning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
