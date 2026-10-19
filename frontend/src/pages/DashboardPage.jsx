@@ -151,21 +151,40 @@ export default function DashboardPage() {
         ) : recentTasks.length === 0 ? (
           <EmptyState icon={ListTodo} title="No tasks yet" description="Create a task and it’ll show up here." action={<Link className="button button-primary button-small" to="/tasks/new"><Plus size={15} /> Create task</Link>} />
         ) : (
-          <div className="table-scroll">
-            <table className="task-table">
-              <thead><tr><th>Task</th><th>Status</th><th>Due date</th><th className="align-right">Updated</th></tr></thead>
-              <tbody>
-                {recentTasks.map((task) => (
-                  <tr key={task._id}>
-                    <td><Link className="task-name" to={`/tasks/${task._id}`}>{task.title}</Link><span className="task-description-cell">{task.description || 'No description'}</span></td>
-                    <td><StatusBadge status={task.status} /></td>
-                    <td><span className={isOverdue(task) ? 'due-date overdue-text' : 'due-date'}>{isOverdue(task) && <ArrowDownRight size={14} />}{formatDate(task.dueDate, { month: 'short', day: 'numeric' })}</span></td>
-                    <td className="align-right updated-date">{formatDate(task.updatedAt, { month: 'short', day: 'numeric' })}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="table-scroll dashboard-task-table">
+              <table className="task-table">
+                <thead><tr><th>Task</th><th>Status</th><th>Due date</th><th className="align-right">Updated</th></tr></thead>
+                <tbody>
+                  {recentTasks.map((task) => (
+                    <tr key={task._id}>
+                      <td><Link className="task-name" to={`/tasks/${task._id}`}>{task.title}</Link><span className="task-description-cell">{task.description || 'No description'}</span></td>
+                      <td><StatusBadge status={task.status} /></td>
+                      <td><span className={isOverdue(task) ? 'due-date overdue-text' : 'due-date'}>{isOverdue(task) && <ArrowDownRight size={14} />}{formatDate(task.dueDate, { month: 'short', day: 'numeric' })}</span></td>
+                      <td className="align-right updated-date">{formatDate(task.updatedAt, { month: 'short', day: 'numeric' })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="task-mobile-list dashboard-mobile-list" aria-label="Recent tasks">
+              {recentTasks.map((task) => (
+                <article className="task-mobile-card" key={`recent-${task._id}`}>
+                  <div className="task-mobile-card-top">
+                    <StatusBadge status={task.status} />
+                    {task.dueDate && (
+                      <span className={isOverdue(task) ? 'due-date overdue-text' : 'due-date'}>
+                        {isOverdue(task) && <ArrowDownRight size={14} aria-hidden="true" />}
+                        {formatDate(task.dueDate, { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                  <Link className="task-mobile-title" to={`/tasks/${task._id}`}>{task.title}</Link>
+                  <p className="task-mobile-description">{task.description || 'No description added yet.'}</p>
+                </article>
+              ))}
+            </div>
+          </>
         )}
       </section>
       <p className="dashboard-footnote"><span className="live-dot" /> Dashboard metrics reflect tasks saved in your database.</p>

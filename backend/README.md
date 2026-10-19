@@ -423,37 +423,68 @@ Deletes a task by ID.
 
 ---
 
-### AI Task Planning Endpoint
+### AI Planning and Answer Endpoint
 
 #### `POST /api/ai/plan-task`
-Generates an actionable, structured task breakdown plan from a natural language project description.
+Supports structured task planning and direct answers using the configured Groq model. Omitting `mode` preserves the original planning behavior.
 
 - Rate limited to `AI_RATE_LIMIT_MAX` requests per `AI_RATE_LIMIT_WINDOW_MS`.
 - Configurable model via `GROQ_MODEL` (for example, `openai/gpt-oss-20b`; it must be available to your Groq account).
-- Strictly validated with Zod before being returned to the client.
+- Requests and generated plans are validated with Zod before being returned to the client.
 
-**Request Body**:
+**Plan request body** (`mode` is optional for backward compatibility):
 ```json
 {
-  "description": "I need to build a portfolio website within three days."
+  "mode": "plan",
+  "title": "Complete my Node.js assignment",
+  "description": "Build the API, test all endpoints, and prepare the submission."
 }
 ```
 
-**Response `200 OK`**:
+`title` is optional. Existing clients can continue sending only `description`.
+
+**Plan response `200 OK`**:
 ```json
 {
   "success": true,
   "plan": {
-    "summary": "Build and launch a personal portfolio website within 3 days.",
+    "mode": "plan",
+    "summary": "Build and submit the tested Node.js assignment.",
     "priority": "high",
     "estimatedHours": 12,
     "steps": [
-      "Plan the website structure and curate work samples",
-      "Build the responsive layout and navigation",
-      "Add project descriptions, screenshots, and contact info",
-      "Test responsive design, accessibility, and deploy to hosting"
+      "Implement the assignment API endpoints and request validation",
+      "Add focused tests for successful and invalid endpoint requests",
+      "Run the test suite and resolve any failing cases",
+      "Prepare the submission notes and verify the final project"
     ]
   }
+}
+```
+
+**Answer request body** (use exactly one of `prompt` or the legacy-compatible `description` field):
+```json
+{
+  "mode": "answer",
+  "prompt": "Explain the difference between Express middleware and controllers."
+}
+```
+
+**Answer response `200 OK`**:
+```json
+{
+  "success": true,
+  "mode": "answer",
+  "answer": "Middleware processes requests in the request pipeline, while controllers implement the endpoint-specific behavior and response."
+}
+```
+
+Prompts and planning descriptions must be non-empty strings no longer than 3000 characters. Plan titles are optional and limited to 200 characters.
+
+**Legacy plan request body**:
+```json
+{
+  "description": "I need to build a portfolio website within three days."
 }
 ```
 
@@ -475,7 +506,7 @@ Generates an actionable, structured task breakdown plan from a natural language 
 ```json
 {
   "success": false,
-  "message": "Too many AI planning requests from this IP. Please try again later."
+  "message": "Too many AI requests from this IP. Please try again later."
 }
 ```
 
@@ -508,6 +539,7 @@ An importable Postman Collection is located in `postman/Task-Manager-API.postman
 4. Ensure the collection variable `baseUrl` is set to `http://localhost:5000` (default) or your deployed URL.
 5. Execute requests in sequence:
    - When **Create Task** runs, its built-in test script automatically stores the new task ID in `{{taskId}}`.
+   - To test direct answers, send a `POST {{baseUrl}}/api/ai/plan-task` request with `{"mode":"answer","prompt":"Explain Express middleware and controllers."}`.
    - Subsequent **Get Task by ID**, **Update Task**, and **Delete Task** requests will automatically use `{{taskId}}`.
    - Validation and error scenario folders verify 400 and 404 responses automatically.
 

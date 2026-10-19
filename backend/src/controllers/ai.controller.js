@@ -7,9 +7,18 @@ import { asyncHandler } from '../utils/async-handler.js';
  * @access  Public
  */
 export const planTask = asyncHandler(async (req, res) => {
-  const { description } = req.body;
+  const { mode = 'plan', title, description, prompt } = req.body;
 
-  const plan = await aiService.generateTaskPlan(description);
+  if (mode === 'answer') {
+    const answer = await aiService.generateAnswer(prompt || description);
+    return res.status(200).json({
+      success: true,
+      mode,
+      answer,
+    });
+  }
+
+  const plan = await aiService.generateTaskPlan({ title, description });
 
   return res.status(200).json({
     success: true,

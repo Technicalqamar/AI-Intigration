@@ -11,16 +11,24 @@ export class ApiClientError extends Error {
 
 async function request(path, options = {}) {
   let response;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 45000);
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
+      signal: options.signal || controller.signal,
       headers: {
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
         ...options.headers,
       },
     });
-  } catch {
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new ApiClientError('The request took too long. Please try again.');
+    }
     throw new ApiClientError('Could not reach the Task Manager API. Check that the backend is running.');
+  } finally {
+    window.clearTimeout(timeout);
   }
 
   let payload;
@@ -106,14 +114,14 @@ export const taskApi = {
   },
 
   async planTask({ title, description = '' }) {
-    const taskDescription = [title.trim(), description.trim()].filter(Boolean).join('\n\n');
     const result = await request('/api/ai/plan-task', {
       method: 'POST',
-      body: jsonBody({ description: taskDescription }),
+      body: jsonBody({ mode: 'plan', title: title.trim(), description: description.trim() }),
     });
     const plan = result.plan;
     if (
       !plan ||
+      plan.mode !== 'plan' ||
       typeof plan.summary !== 'string' ||
       plan.summary.trim().length === 0 ||
       !['low', 'medium', 'high'].includes(plan.priority) ||
@@ -127,5 +135,20 @@ export const taskApi = {
       throw new ApiClientError('The AI service returned a plan in an unexpected format.');
     }
     return plan;
+  },
+
+  async answerPrompt(prompt) {
+    const result = await request('/api/ai/plan-task', {
+      method: 'POST',
+      body: jsonBody({ mode: 'answer', prompt: prompt.trim() }),
+    });
+    if (
+      result.mode !== 'answer' ||
+      typeof result.answer !== 'string' ||
+      !result.answer.trim()
+    ) {
+      throw new ApiClientError('The AI service returned an answer in an unexpected format.');
+    }
+    return result.answer;
   },
 };

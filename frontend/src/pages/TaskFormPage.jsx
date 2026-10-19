@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, ChevronDown, LoaderCircle, Save } from 'lucide-react';
 import { taskApi } from '../api.js';
 import { ErrorState, LoadingState, PageHeading } from '../components/ui.jsx';
@@ -8,8 +8,14 @@ const initialForm = { title: '', description: '', status: 'pending', dueDate: ''
 
 export default function TaskFormPage() {
   const { id } = useParams();
+  const location = useLocation();
   const editing = Boolean(id);
-  const [form, setForm] = useState(initialForm);
+  const suggestedTask = location.state?.task;
+  const [form, setForm] = useState(() => ({
+    ...initialForm,
+    title: !editing ? suggestedTask?.title || '' : '',
+    description: !editing ? suggestedTask?.description || '' : '',
+  }));
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +50,7 @@ export default function TaskFormPage() {
   const validateForm = () => {
     const errors = {};
     if (!form.title.trim()) errors.title = 'A task title is required.';
-    else if (form.title.trim().length > 200) errors.title = 'Keep your title under 200 characters.';
+    else if (form.title.trim().length > 150) errors.title = 'Keep your title under 150 characters.';
     if (form.description.length > 2000) errors.description = 'Keep your description under 2,000 characters.';
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -101,7 +107,7 @@ export default function TaskFormPage() {
               value={form.title}
               onChange={setField}
               placeholder="e.g. Prepare the product launch"
-              maxLength={200}
+              maxLength={150}
               aria-invalid={Boolean(fieldErrors.title)}
               aria-describedby={fieldErrors.title ? 'title-error' : 'title-help'}
               autoFocus

@@ -158,6 +158,34 @@ export default function TasksPage() {
             </table>
           </div>
         )}
+        {!error && !loading && filteredTasks.length > 0 && (
+          <div className="task-mobile-list" aria-label="Tasks">
+            {filteredTasks.map((task) => (
+              <article className="task-mobile-card" key={`mobile-${task._id}`}>
+                <div className="task-mobile-card-top">
+                  <StatusBadge status={task.status} />
+                  {task.dueDate && (
+                    <span className={isOverdue(task) ? 'due-date overdue-text' : 'due-date'}>
+                      {isOverdue(task) ? <ArrowDownRight size={14} aria-hidden="true" /> : <CalendarDays size={14} aria-hidden="true" />}
+                      {formatDate(task.dueDate, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {isOverdue(task) && <span className="task-overdue-label">Overdue</span>}
+                    </span>
+                  )}
+                </div>
+                <Link className="task-mobile-title" to={`/tasks/${task._id}`}>{task.title}</Link>
+                <p className="task-mobile-description">{task.description || 'No description added yet.'}</p>
+                <div className="task-mobile-card-footer">
+                  <span className="updated-date">Updated {formatDate(task.updatedAt, { month: 'short', day: 'numeric' })}</span>
+                  <div className="row-actions" aria-label={`Actions for ${task.title}`}>
+                    <Link className="icon-button row-action" to={`/tasks/${task._id}`} aria-label={`View ${task.title}`} title="View task"><Eye size={16} /></Link>
+                    <Link className="icon-button row-action" to={`/tasks/${task._id}/edit`} aria-label={`Edit ${task.title}`} title="Edit task"><Pencil size={15} /></Link>
+                    <button className="icon-button row-action row-delete" type="button" onClick={() => setTaskToDelete(task)} aria-label={`Delete ${task.title}`} title="Delete task"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
         {!loading && !error && tasks.length > 0 && (
           <div className="tasks-card-footer"><span>Showing {filteredTasks.length} of {tasks.length} tasks</span><Link to="/" className="text-link">Back to overview <ArrowRight size={14} /></Link></div>
         )}

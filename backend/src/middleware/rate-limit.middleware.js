@@ -1,7 +1,7 @@
 import rateLimit from 'express-rate-limit';
 
 /**
- * Rate limiter middleware specifically targeting AI planning operations to protect quota.
+ * Rate limiter middleware for AI operations to protect provider quota.
  */
 export const createAiRateLimiter = (options = {}) => {
   const windowMs =
@@ -22,7 +22,7 @@ export const createAiRateLimiter = (options = {}) => {
     handler: (req, res) => {
       res.status(429).json({
         success: false,
-        message: 'Too many AI planning requests from this IP. Please try again later.',
+        message: 'Too many AI requests from this IP. Please try again later.',
       });
     },
     ...options,

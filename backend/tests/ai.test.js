@@ -125,6 +125,46 @@ describe('AI Task Planning Endpoint (POST /api/ai/plan-task)', () => {
       assert.strictEqual(res.status, 400);
       assert.strictEqual(res.body.success, false);
     });
+
+    it('should reject unsupported modes', async () => {
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'summarize', description: 'A valid request.' });
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('should reject missing answer prompts and non-string prompts', async () => {
+      const missingPrompt = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'answer' });
+      const invalidPrompt = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'answer', prompt: 42 });
+
+      assert.strictEqual(missingPrompt.status, 400);
+      assert.strictEqual(invalidPrompt.status, 400);
+    });
+
+    it('should reject excessively long answer prompts', async () => {
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'answer', prompt: 'a'.repeat(3001) });
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+    });
+
+    it('should reject a combined title and description longer than the limit', async () => {
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({
+          mode: 'plan',
+          title: 'a'.repeat(200),
+          description: 'b'.repeat(2801),
+        });
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+    });
   });
 
   describe('Successful planning with mocked Groq response', () => {
@@ -142,10 +182,93 @@ describe('AI Task Planning Endpoint (POST /api/ai/plan-task)', () => {
         .send({ description: 'Build a portfolio website in three days.' });
 
       assert.strictEqual(res.status, 200);
-      assert.deepStrictEqual(res.body, { success: true, plan: mockPlan });
+      assert.deepStrictEqual(res.body, {
+        success: true,
+        plan: { mode: 'plan', ...mockPlan },
+      });
       assert.strictEqual(requestOptions.model, 'openai/gpt-oss-20b');
       assert.deepStrictEqual(requestOptions.response_format, { type: 'json_object' });
       assert.strictEqual(sdkOptions.timeout, 20000);
+    });
+
+    it('should include an optional title and explicit plan mode in the provider request', async () => {
+      let requestOptions;
+      aiService.getGroqClient = () => mockGroqClient(async (options) => {
+        requestOptions = options;
+        return completionWithContent(JSON.stringify(mockPlan));
+      });
+
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({
+          mode: 'plan',
+          title: 'Complete my Node.js assignment',
+          description: 'Build the API and test all endpoints.',
+        });
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.plan.mode, 'plan');
+      assert.strictEqual(
+        requestOptions.messages[1].content,
+        'Title: Complete my Node.js assignment\nDescription: Build the API and test all endpoints.'
+      );
+    });
+  });
+
+  describe('Direct answer mode', () => {
+    it('should return a direct answer rather than planning steps', async () => {
+      const answer = 'Express middleware processes requests in the pipeline; controllers implement endpoint behavior.';
+      let requestOptions;
+      aiService.getGroqClient = () => mockGroqClient(async (options) => {
+        requestOptions = options;
+        return completionWithContent(answer);
+      });
+
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'answer', prompt: 'Explain middleware and controllers.' });
+
+      assert.strictEqual(res.status, 200);
+      assert.deepStrictEqual(res.body, { success: true, mode: 'answer', answer });
+      assert.strictEqual(requestOptions.messages[1].content, 'Explain middleware and controllers.');
+      assert.match(requestOptions.messages[0].content, /actual request directly/i);
+      assert.strictEqual('response_format' in requestOptions, false);
+    });
+
+    it('should answer a request for 15 unique boys’ names with the names themselves', async () => {
+      const names = [
+        'Liam', 'Noah', 'Oliver', 'Elijah', 'James',
+        'Henry', 'Theodore', 'Ezra', 'Milo', 'Kai',
+        'Arlo', 'Jasper', 'Finn', 'Leo', 'Rowan',
+      ];
+      const answer = names.map((name, index) => `${index + 1}. ${name}`).join('\n');
+      aiService.getGroqClient = () => mockGroqClient(async () =>
+        completionWithContent(answer)
+      );
+
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'answer', prompt: "Give me 15 unique boys' names." });
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.mode, 'answer');
+      assert.strictEqual(res.body.answer.split('\n').length, 15);
+      for (const name of names) assert.ok(res.body.answer.includes(name));
+    });
+
+    it('should safely reject an empty answer from Groq', async () => {
+      aiService.getGroqClient = () => mockGroqClient(async () =>
+        completionWithContent('   ')
+      );
+
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'answer', prompt: 'Explain Express.' });
+
+      assert.strictEqual(res.status, 502);
+      assert.strictEqual(res.body.success, false);
+      assert.ok(res.body.message.includes('empty response'));
+      assert.ok(!JSON.stringify(res.body).includes(process.env.GROQ_API_KEY));
     });
   });
 
@@ -279,7 +402,7 @@ describe('AI Task Planning Endpoint (POST /api/ai/plan-task)', () => {
       const res = await request(testApp).post('/test-ai').send({});
       assert.strictEqual(res.status, 429);
       assert.strictEqual(res.body.success, false);
-      assert.ok(res.body.message.includes('Too many AI planning requests'));
+      assert.ok(res.body.message.includes('Too many AI requests'));
     });
   });
 });
