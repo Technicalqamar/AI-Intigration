@@ -213,6 +213,26 @@ describe('AI Task Planning Endpoint (POST /api/ai/plan-task)', () => {
         'Title: Complete my Node.js assignment\nDescription: Build the API and test all endpoints.'
       );
     });
+
+    it('should accept a goal as the plan description without requiring a separate title', async () => {
+      const goal = 'Prepare the product launch and coordinate the release.';
+      let requestOptions;
+      aiService.getGroqClient = () => mockGroqClient(async (options) => {
+        requestOptions = options;
+        return completionWithContent(JSON.stringify(mockPlan));
+      });
+
+      const res = await request(app)
+        .post('/api/ai/plan-task')
+        .send({ mode: 'plan', description: goal });
+
+      assert.strictEqual(res.status, 200);
+      assert.deepStrictEqual(res.body, {
+        success: true,
+        plan: { mode: 'plan', ...mockPlan },
+      });
+      assert.strictEqual(requestOptions.messages[1].content, goal);
+    });
   });
 
   describe('Direct answer mode', () => {

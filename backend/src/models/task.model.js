@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const taskSchema = new mongoose.Schema(
   {
+    ownerId: {
+      type: String,
+      trim: true,
+      select: false,
+    },
     title: {
       type: String,
       required: [true, 'Task title is required.'],
@@ -33,12 +38,14 @@ const taskSchema = new mongoose.Schema(
     toJSON: {
       transform: (doc, ret) => {
         delete ret.__v;
+        delete ret.ownerId;
         return ret;
       },
     },
     toObject: {
       transform: (doc, ret) => {
         delete ret.__v;
+        delete ret.ownerId;
         return ret;
       },
     },

@@ -1,3 +1,4 @@
+import React from 'react';
 import { AlertCircle, Check, CircleDashed, LoaderCircle } from 'lucide-react';
 
 export function PageHeading({ eyebrow, title, description, action }) {

@@ -6,8 +6,12 @@ import morgan from 'morgan';
 
 import errorMiddleware from './middleware/error.middleware.js';
 import notFoundMiddleware from './middleware/not-found.middleware.js';
+import { assertAssistantConfiguration } from './middleware/assistant-auth.middleware.js';
 import aiRoutes from './routes/ai.routes.js';
+import taskAssistantRoutes from './routes/task-assistant.routes.js';
 import taskRoutes from './routes/task.routes.js';
+
+assertAssistantConfiguration();
 
 const app = express();
 
@@ -68,6 +72,7 @@ app.get('/', (req, res) => {
 // Mount domain routes
 app.use('/api/tasks', taskRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/ai/assistant', taskAssistantRoutes);
 
 // Catch 404 for unknown routes
 app.use(notFoundMiddleware);

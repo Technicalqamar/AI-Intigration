@@ -113,10 +113,21 @@ export const taskApi = {
     return request(`/api/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' });
   },
 
-  async planTask({ title, description = '' }) {
+  async planTask({ title = '', description = '' } = {}) {
+    const cleanTitle = typeof title === 'string' ? title.trim() : '';
+    const cleanDescription = typeof description === 'string' ? description.trim() : '';
+    const taskDescription = cleanDescription || cleanTitle;
+    if (!taskDescription) {
+      throw new ApiClientError('Add a task title or description before requesting a plan.');
+    }
+
     const result = await request('/api/ai/plan-task', {
       method: 'POST',
-      body: jsonBody({ mode: 'plan', title: title.trim(), description: description.trim() }),
+      body: jsonBody({
+        mode: 'plan',
+        ...(cleanTitle ? { title: cleanTitle } : {}),
+        description: taskDescription,
+      }),
     });
     const plan = result.plan;
     if (
@@ -150,5 +161,39 @@ export const taskApi = {
       throw new ApiClientError('The AI service returned an answer in an unexpected format.');
     }
     return result.answer;
+  },
+};
+
+export const assistantApi = {
+  async sendMessage(message) {
+    const result = await request('/api/ai/assistant/message', {
+      method: 'POST',
+      body: jsonBody({ message: message.trim() }),
+    });
+    if (
+      !result.assistant ||
+      typeof result.assistant.message !== 'string' ||
+      !result.assistant.action ||
+      typeof result.assistant.action !== 'object'
+    ) {
+      throw new ApiClientError('The task assistant returned an unexpected response.');
+    }
+    return result.assistant;
+  },
+
+  async confirmDelete(confirmationToken) {
+    const result = await request('/api/ai/assistant/confirm-delete', {
+      method: 'POST',
+      body: jsonBody({ confirmationToken, confirm: true }),
+    });
+    if (
+      !result.assistant ||
+      typeof result.assistant.message !== 'string' ||
+      !result.assistant.action ||
+      typeof result.assistant.action !== 'object'
+    ) {
+      throw new ApiClientError('The task assistant returned an unexpected response.');
+    }
+    return result.assistant;
   },
 };

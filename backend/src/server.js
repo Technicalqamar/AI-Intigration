@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import app from './app.js';
 import { connectDB, disconnectDB } from './config/db.js';
+
+const { default: app } = await import('./app.js');
 
 // If PORT is 8080 (reserved by Cloud Run internal container runtime), default to 3000 for dev server
 const rawPort = process.env.PORT;

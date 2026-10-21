@@ -31,7 +31,7 @@ A robust, secure, and fully testable Node.js & Express REST API featuring comple
 - **AI Task Decomposition**: Integrates Groq to convert natural language goals into structured action steps, estimates, and priorities.
 - **Strict Validation**: Bidirectional Zod validation on incoming HTTP payloads, route parameters, and AI provider outputs.
 - **Security Hardened**: Helmet HTTP security headers, CORS origin whitelisting, JSON payload size bounds, and credential sanitization in logs.
-- **Dedicated Rate Limiting**: Dedicated rate limiting on the AI planning endpoint to protect API quotas.
+- **Dedicated Rate Limiting**: A shared per-IP rate limiter protects AI planning and task-assistant requests.
 - **Automated Tests**: Tests use the native Node.js test runner (`node:test`), Supertest, an isolated in-memory MongoDB server (`mongodb-memory-server`), and deterministic Groq mocks.
 - **Postman Ready**: Pre-configured collection with automatic variable binding and assertion scripts.
 
@@ -94,6 +94,7 @@ A robust, secure, and fully testable Node.js & Express REST API featuring comple
 │       └── task.validator.js         # Zod schemas for task creation, update, and params
 └── tests/
     ├── ai.test.js                    # Automated tests for AI planning & rate limiting
+    ├── task-assistant-rate-limit.test.js # Assistant provider and application rate-limit responses
     └── task.test.js                  # Automated tests for CRUD, health check & errors
 ```
 
@@ -428,7 +429,7 @@ Deletes a task by ID.
 #### `POST /api/ai/plan-task`
 Supports structured task planning and direct answers using the configured Groq model. Omitting `mode` preserves the original planning behavior.
 
-- Rate limited to `AI_RATE_LIMIT_MAX` requests per `AI_RATE_LIMIT_WINDOW_MS`.
+- Shares the per-IP limit of `AI_RATE_LIMIT_MAX` requests per `AI_RATE_LIMIT_WINDOW_MS` with task-assistant and other AI requests.
 - Configurable model via `GROQ_MODEL` (for example, `openai/gpt-oss-20b`; it must be available to your Groq account).
 - Requests and generated plans are validated with Zod before being returned to the client.
 
@@ -487,6 +488,44 @@ Prompts and planning descriptions must be non-empty strings no longer than 3000 
   "description": "I need to build a portfolio website within three days."
 }
 ```
+
+### Development-only task assistant
+
+The task-aware assistant is available only outside production when an explicit single-user development identity is configured:
+
+```dotenv
+AI_ASSISTANT_DEV_IDENTITY_ENABLED=true
+AI_ASSISTANT_DEV_USER_ID=local-developer
+```
+
+The assistant refuses production startup if the development identity flag is enabled, and its routes return 404 when the flag is disabled or `NODE_ENV=production`. This is a local-development/testing identity only, not authentication suitable for production. Never enable it in a deployed environment. Production assistant access requires integrating a real verified authentication provider and an explicit ownership migration strategy.
+
+Tasks gain an optional, private `ownerId` field for assistant-created records. When the development identity is enabled, the existing CRUD routes are scoped to that one configured identity as well; ownerless legacy tasks return no results through those routes and are left unchanged in MongoDB. Disable the flag to restore the original unscoped CRUD behavior. No ownership is inferred or migrated.
+
+The existing CRUD API currently has no production authentication middleware and remains as it was when the assistant flag is disabled. This development identity does not secure a deployed API. Do not expose the service to untrusted users; production task privacy requires real authentication and an ownership migration plan, in addition to keeping the task assistant disabled.
+
+#### `POST /api/ai/assistant/message`
+
+The configured development identity is attached server-side; clients must not send a user ID. The AI only classifies the user's request into a validated allowlisted action. Database reads and mutations run in server code scoped to the configured identity.
+
+```json
+{ "message": "Show me my pending tasks." }
+```
+
+Successful responses use `{ "success": true, "assistant": { "message": "...", "action": { ... } } }`. Supported action types are `list`, `count`, `report`, `create`, `update`, `delete`, and `clarify`. Counts and reports are computed from actual owned task documents and the existing `pending`, `in-progress`, `completed`, and `dueDate` fields.
+
+Task creation and update execute only for explicit natural-language requests with valid extracted fields and a safe, unambiguous title match. A response with `"status":"not_performed"` asks for clarification and does not mutate data.
+
+Delete requests never delete immediately. The response returns `"status":"confirmation_required"`, the exact task title/id, and a random confirmation token that expires after five minutes:
+
+```json
+{
+  "confirmationToken": "<token returned by the assistant>",
+  "confirm": true
+}
+```
+
+Send that body to `POST /api/ai/assistant/confirm-delete`. The token is single-use and bound server-side to both the configured identity and exact task. The confirmation state is held in process memory and is invalidated by a server restart.
 
 **Response `400 Bad Request` (Empty/Missing description)**:
 ```json
@@ -593,5 +632,5 @@ This application is ready for deployment on [Render](https://render.com) as a We
 | `[Server] Failed to initialize server: Database connection failed...` | `MONGODB_URI` is missing or invalid in `.env` | Verify `.env` exists and contains a valid MongoDB Atlas URI with appropriate network IP whitelist access (e.g., `0.0.0.0/0` in Atlas Network Access). |
 | `AI service is currently unavailable. Groq API key is not configured.` | `GROQ_API_KEY` is empty or missing | Set `GROQ_API_KEY` in `.env` using a key from your Groq console. |
 | `AI request timed out after 20000ms.` | Upstream network latency or slow inference | Increase `AI_REQUEST_TIMEOUT_MS` in `.env` (e.g. `30000`). |
-| `Too many AI planning requests from this IP.` | Rate limit triggered | Wait 15 minutes or adjust `AI_RATE_LIMIT_MAX` / `AI_RATE_LIMIT_WINDOW_MS` in `.env`. |
+| `Too many AI requests from this IP. Please try again later.` | The application's shared per-IP AI request limit was reached | Wait for the configured window to reset. For local development, adjust `AI_RATE_LIMIT_MAX` in `.env` moderately and restart the backend; keep production limits enabled. |
 | Port conflict on `5000` | Port already in use by another process | Set `PORT=5001` (or another port) in `.env`. |

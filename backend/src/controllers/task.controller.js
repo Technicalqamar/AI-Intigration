@@ -11,6 +11,7 @@ export const createTask = asyncHandler(async (req, res) => {
   const { title, description, status, dueDate } = req.body;
 
   const task = await Task.create({
+    ...(req.assistantIdentity ? { ownerId: req.assistantIdentity.userId } : {}),
     title,
     description: description || '',
     status: status || 'pending',
@@ -30,7 +31,10 @@ export const createTask = asyncHandler(async (req, res) => {
  * @access  Public
  */
 export const getAllTasks = asyncHandler(async (req, res) => {
-  const tasks = await Task.find().sort({ createdAt: -1 });
+  const filter = req.assistantIdentity
+    ? { ownerId: req.assistantIdentity.userId }
+    : {};
+  const tasks = await Task.find(filter).sort({ createdAt: -1 });
 
   return res.status(200).json({
     success: true,
@@ -47,7 +51,10 @@ export const getAllTasks = asyncHandler(async (req, res) => {
 export const getTaskById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const task = await Task.findById(id);
+  const filter = req.assistantIdentity
+    ? { _id: id, ownerId: req.assistantIdentity.userId }
+    : { _id: id };
+  const task = await Task.findOne(filter);
 
   if (!task) {
     throw ApiError.notFound(`Task with ID '${id}' not found.`);
@@ -76,8 +83,11 @@ export const updateTask = asyncHandler(async (req, res) => {
   if (status !== undefined) updateData.status = status;
   if (dueDate !== undefined) updateData.dueDate = dueDate;
 
-  const updatedTask = await Task.findByIdAndUpdate(
-    id,
+  const filter = req.assistantIdentity
+    ? { _id: id, ownerId: req.assistantIdentity.userId }
+    : { _id: id };
+  const updatedTask = await Task.findOneAndUpdate(
+    filter,
     updateData,
     {
       returnDocument: 'after',
@@ -104,7 +114,10 @@ export const updateTask = asyncHandler(async (req, res) => {
 export const deleteTask = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const deletedTask = await Task.findByIdAndDelete(id);
+  const filter = req.assistantIdentity
+    ? { _id: id, ownerId: req.assistantIdentity.userId }
+    : { _id: id };
+  const deletedTask = await Task.findOneAndDelete(filter);
 
   if (!deletedTask) {
     throw ApiError.notFound(`Task with ID '${id}' not found.`);

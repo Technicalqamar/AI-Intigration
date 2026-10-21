@@ -4,6 +4,7 @@ import {
   AlignLeft,
   ArrowUpRight,
   Bot,
+  MessagesSquare,
   CheckSquare2,
   LayoutDashboard,
   Moon,
@@ -15,11 +16,13 @@ import { Toast } from './ui.jsx';
 const navigation = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/tasks', label: 'All tasks', icon: CheckSquare2 },
+  { to: '/chat', label: 'AI chat', icon: MessagesSquare },
   { to: '/planner', label: 'AI planner', icon: Bot },
 ];
 
 const pageTitles = [
   { match: '/planner', label: 'AI task planner' },
+  { match: '/chat', label: 'AI chat' },
   { match: '/tasks/new', label: 'Create a task' },
   { match: '/tasks', label: 'Tasks' },
   { match: '/', label: 'Overview' },
@@ -87,7 +90,7 @@ export default function Layout() {
           <div className="note-icon"><Bot size={17} aria-hidden="true" /></div>
           <strong>Make space for deep work</strong>
           <p>Turn your next big idea into a clear, actionable plan.</p>
-          <Link to="/planner">Try AI planner <ArrowUpRight size={14} aria-hidden="true" /></Link>
+          <Link to="/chat">Chat with Taskflow AI <ArrowUpRight size={14} aria-hidden="true" /></Link>
         </div>
         <div className="sidebar-footer">
           <div className="avatar">TF</div>

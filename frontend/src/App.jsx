@@ -5,6 +5,7 @@ import Layout from './components/Layout.jsx';
 import { PageHeading } from './components/ui.jsx';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
 const PlannerPage = lazy(() => import('./pages/PlannerPage.jsx'));
 const TaskDetailsPage = lazy(() => import('./pages/TaskDetailsPage.jsx'));
 const TaskFormPage = lazy(() => import('./pages/TaskFormPage.jsx'));
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="tasks/new" element={<TaskFormPage />} />
           <Route path="tasks/:id/edit" element={<TaskFormPage />} />
           <Route path="tasks/:id" element={<TaskDetailsPage />} />
+          <Route path="chat" element={<ChatPage />} />
           <Route path="planner" element={<PlannerPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

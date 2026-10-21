@@ -7,6 +7,7 @@ import {
   updateTask,
 } from '../controllers/task.controller.js';
 import { validate } from '../middleware/validate.middleware.js';
+import { developmentTaskOwnershipScope } from '../middleware/assistant-auth.middleware.js';
 import {
   createTaskSchema,
   taskIdParamSchema,
@@ -14,6 +15,8 @@ import {
 } from '../validators/task.validator.js';
 
 const router = Router();
+
+router.use(developmentTaskOwnershipScope);
 
 router
   .route('/')
