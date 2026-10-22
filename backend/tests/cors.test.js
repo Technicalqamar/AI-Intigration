@@ -7,7 +7,7 @@ import request from 'supertest';
 
 const frontendOrigin = 'https://codenestagent.vercel.app';
 process.env.NODE_ENV = 'test';
-process.env.CORS_ORIGIN = frontendOrigin;
+process.env.CORS_ORIGIN = 'http://localhost:3000,http://localhost:5173';
 
 const { default: app } = await import('../src/app.js');
 
@@ -48,42 +48,40 @@ describe('Production frontend CORS configuration', () => {
     assert.match(response.headers['access-control-allow-headers'], /Authorization/i);
   });
 
-  it('fails production startup when the exact frontend origin is missing or wildcarded', () => {
-    const validProductionConfig = spawnSync(
+  it('does not return CORS headers for a disallowed origin', async () => {
+    const response = await request(app)
+      .get('/api/tasks')
+      .set('Origin', 'https://untrusted.example');
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(response.headers['access-control-allow-origin'], undefined);
+  });
+
+  it('keeps the production frontend allowlisted when CORS_ORIGIN contains only local origins', () => {
+    const productionWithLocalOrigins = spawnSync(
       process.execPath,
       [
         '--input-type=module',
         '-e',
-        `process.env.NODE_ENV = 'production'; process.env.CORS_ORIGIN = ${JSON.stringify(frontendOrigin)}; await import('./src/app.js');`,
+        "process.env.NODE_ENV = 'production'; process.env.CORS_ORIGIN = 'http://localhost:3000,http://localhost:5173'; await import('./src/app.js');",
       ],
       { cwd: process.cwd(), encoding: 'utf8' }
     );
-    assert.strictEqual(validProductionConfig.status, 0, validProductionConfig.stderr);
+    assert.strictEqual(productionWithLocalOrigins.status, 0, productionWithLocalOrigins.stderr);
 
-    for (const value of [
-      undefined,
-      'http://localhost:3000',
-      '*',
-      `${frontendOrigin},*`,
-    ]) {
-      const setup = value === undefined
-        ? 'delete process.env.CORS_ORIGIN;'
-        : `process.env.CORS_ORIGIN = ${JSON.stringify(value)};`;
+    for (const value of ['*', `http://localhost:3000,*`]) {
       const result = spawnSync(
         process.execPath,
         [
           '--input-type=module',
           '-e',
-          `process.env.NODE_ENV = 'production'; ${setup} await import('./src/app.js');`,
+          `process.env.NODE_ENV = 'production'; process.env.CORS_ORIGIN = ${JSON.stringify(value)}; await import('./src/app.js');`,
         ],
         { cwd: process.cwd(), encoding: 'utf8' }
       );
 
       assert.notStrictEqual(result.status, 0);
-      assert.match(
-        result.stderr,
-        /CORS_ORIGIN must include https:\/\/codenestagent\.vercel\.app and must not use a wildcard in production/
-      );
+      assert.match(result.stderr, /CORS_ORIGIN must not use a wildcard in production/);
     }
   });
 });

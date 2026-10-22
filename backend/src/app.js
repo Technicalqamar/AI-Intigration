@@ -15,20 +15,22 @@ assertAssistantConfiguration();
 
 const productionFrontendOrigin = 'https://codenestagent.vercel.app';
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
-const corsOrigins = corsOrigin === '*'
+const configuredCorsOrigins = corsOrigin === '*'
   ? '*'
   : corsOrigin.split(',').map((origin) => origin.trim());
 
 if (
   process.env.NODE_ENV === 'production' &&
-  (corsOrigins === '*' ||
-    corsOrigins.includes('*') ||
-    !corsOrigins.includes(productionFrontendOrigin))
+  (configuredCorsOrigins === '*' || configuredCorsOrigins.includes('*'))
 ) {
   throw new Error(
-    `CORS_ORIGIN must include ${productionFrontendOrigin} and must not use a wildcard in production.`
+    'CORS_ORIGIN must not use a wildcard in production.'
   );
 }
+
+const corsOrigins = configuredCorsOrigins === '*'
+  ? '*'
+  : [...new Set([...configuredCorsOrigins, productionFrontendOrigin])];
 
 const app = express();
 
