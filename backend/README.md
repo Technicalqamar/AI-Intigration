@@ -593,9 +593,10 @@ This application is ready for deployment on [Render](https://render.com) as a We
 1. **Push repository to GitHub / GitLab**.
 2. **Create a new Web Service** on Render:
    - Connect your GitHub repository.
+   - **Root Directory**: `backend`
    - **Environment**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `node src/server.js` (or `npm start`)
+   - **Build Command**: `npm ci`
+   - **Start Command**: `npm start`
 3. **Configure Environment Variables** in the Render Dashboard (under **Environment**):
    - `PORT`: `10000` (or leave unset; Render sets this automatically)
    - `NODE_ENV`: `production`
@@ -607,7 +608,7 @@ This application is ready for deployment on [Render](https://render.com) as a We
    - `AI_RATE_LIMIT_WINDOW_MS`: `900000`
    - `AI_RATE_LIMIT_MAX`: `10`
 4. **Deploy**:
-   - Render will build dependencies and start the service.
+   - Render installs and starts from `backend`, where `package.json`, `package-lock.json`, and `src/server.js` are located. The repository-root `render.yaml` records these settings for Blueprint deployments.
    - Test by opening `<your-render-url>/` in your browser to verify the health check endpoint returns `200 OK` with database connected.
 
 ---

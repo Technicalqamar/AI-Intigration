@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: taskflow-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
