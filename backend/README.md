@@ -153,8 +153,8 @@ GROQ_API_KEY=your_groq_api_key_here
 # Groq model identifier
 GROQ_MODEL=openai/gpt-oss-20b
 
-# CORS Allowed Origin (Comma-separated for multiple origins, or * for all)
-CORS_ORIGIN=http://localhost:3000
+# CORS Allowed Origins (comma-separated; production requires the exact Vercel origin)
+CORS_ORIGIN=http://localhost:3000,http://localhost:5173,https://codenestagent.vercel.app
 
 # AI Configuration
 AI_REQUEST_TIMEOUT_MS=20000
@@ -603,7 +603,7 @@ This application is ready for deployment on [Render](https://render.com) as a We
    - `MONGODB_URI`: `mongodb+srv://<user>:<pwd>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority`
    - `GROQ_API_KEY`: Your Groq API key.
    - `GROQ_MODEL`: A model available to your Groq account.
-   - `CORS_ORIGIN`: Your frontend URL or `*`
+   - `CORS_ORIGIN`: `https://codenestagent.vercel.app` (plus any additional exact frontend origins, comma-separated; wildcard origins are rejected in production)
    - `AI_REQUEST_TIMEOUT_MS`: `20000`
    - `AI_RATE_LIMIT_WINDOW_MS`: `900000`
    - `AI_RATE_LIMIT_MAX`: `10`

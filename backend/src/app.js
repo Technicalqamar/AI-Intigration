@@ -13,20 +13,36 @@ import taskRoutes from './routes/task.routes.js';
 
 assertAssistantConfiguration();
 
+const productionFrontendOrigin = 'https://codenestagent.vercel.app';
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const corsOrigins = corsOrigin === '*'
+  ? '*'
+  : corsOrigin.split(',').map((origin) => origin.trim());
+
+if (
+  process.env.NODE_ENV === 'production' &&
+  (corsOrigins === '*' ||
+    corsOrigins.includes('*') ||
+    !corsOrigins.includes(productionFrontendOrigin))
+) {
+  throw new Error(
+    `CORS_ORIGIN must include ${productionFrontendOrigin} and must not use a wildcard in production.`
+  );
+}
+
 const app = express();
 
-// Security HTTP headers
-app.use(helmet());
-
-// CORS configuration
-const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+// Apply CORS before middleware and routes so API errors and preflight requests receive CORS headers.
 app.use(
   cors({
-    origin: corsOrigin === '*' ? '*' : corsOrigin.split(',').map((origin) => origin.trim()),
+    origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
+// Security HTTP headers
+app.use(helmet());
 
 // Request body parsers with payload size safeguards
 app.use(express.json({ limit: '100kb' }));
